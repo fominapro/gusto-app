@@ -171,4 +171,18 @@ const ChatInterface: React.FC = () => {
           <button
             onClick={() => handleSend()}
             disabled={isLoading || isLimitReached || input.trim().length === 0}
-            className="p-3 rounded-xl bg-emerald-600 text-white hover:bg-emerald-70
+            className="p-3 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-stone-400 transition-colors"
+          >
+            {isLoading ? (
+              <div className="w-5 h-5 border-2 border-t-2 border-t-white border-emerald-300 rounded-full animate-spin"></div>
+            ) : (
+              <Send size={20} />
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ChatInterface;
