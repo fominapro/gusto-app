@@ -1,26 +1,20 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NASTYA_SYSTEM_INSTRUCTION } from "../constants";
 
-// 1. ИСПРАВЛЕНИЕ: Правильный доступ к ключу в Vite/Vercel
+// Берем ключ из настроек Vercel
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
 
-// Лог для проверки (будет виден в консоли браузера, но ключ скроем)
 if (!apiKey) {
-  console.error("❌ ОШИБКА: API Key не найден! Проверь настройки Vercel (VITE_GEMINI_API_KEY).");
-} else {
-  console.log("✅ API Key найден. Подключаемся к ИИ...");
+  console.error("❌ API Key не найден!");
 }
 
-// 2. Инициализация стандартного SDK
 const genAI = new GoogleGenerativeAI(apiKey);
 
-// 3. ИСПРАВЛЕНИЕ: Используем стабильную модель gemini-1.5-flash
+// Устанавливаем СТАБИЛЬНУЮ модель
 const model = genAI.getGenerativeModel({
-  model: "gemini-pro",
+  model: "gemini-1.5-flash", // Эта модель сейчас самая быстрая и рабочая
   systemInstruction: NASTYA_SYSTEM_INSTRUCTION,
 });
-
-// --- Chat Service ---
 
 export const createNastyaChat = () => {
   return model.startChat({
@@ -35,41 +29,31 @@ export const sendMessageToAI = async (chat: any, message: string): Promise<{ tex
   try {
     const result = await chat.sendMessage(message);
     const response = await result.response;
-    const text = response.text();
-    
-    return { text, sources: [] };
+    return { text: response.text(), sources: [] };
   } catch (error) {
-    console.error("❌ Ошибка при отправке сообщения:", error);
-    // Возвращаем вежливое сообщение, если ИИ упал
+    console.error("❌ Ошибка ИИ:", error);
     return { 
-        text: "На кухне небольшой переполох (ошибка связи с Google). Попробуй включить VPN или спроси меня еще раз через минуту! 🌿", 
+        text: "На кухне небольшой переполох (ошибка связи). Попробуй включить VPN или спроси еще раз через минуту! 🌿", 
         sources: [] 
     };
   }
 };
 
-// --- Additional Services ---
-
 export const generateMenuPlan = async (params: { days: number; diet: string; mood: string; allergies: string }): Promise<string | undefined> => {
-  const prompt = `Составь меню на ${params.days} дней.
-  Диета: ${params.diet || 'Нет'}. Настроение: ${params.mood}. Аллергии: ${params.allergies || 'Нет'}.
-  Тон: теплый, как Настя. Используй Markdown.`;
-
+  const prompt = `Составь меню на ${params.days} дней. Тон: теплый, как Настя.`;
   try {
     const result = await model.generateContent(prompt);
     return result.response.text();
   } catch (error) {
-    console.error("Error generating menu:", error);
     return undefined;
   }
 };
 
 export const getDailyInspiration = async (): Promise<string | undefined> => {
   try {
-    const result = await model.generateContent("Предложи одно вдохновляющее блюдо на сегодня. Кратко и страстно.");
+    const result = await model.generateContent("Предложи вдохновляющее блюдо на сегодня.");
     return result.response.text();
   } catch (error) {
-     console.error("Error daily inspiration:", error);
      return undefined;
   }
 };
