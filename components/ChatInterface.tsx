@@ -5,7 +5,6 @@ import { Send, Utensils, Coffee, CloudSun } from 'lucide-react';
 import { FREE_MESSAGE_LIMIT } from '../constants'; // <-- Вернем FREE_MESSAGE_LIMIT
 import { createNastyaChat, sendMessageToAI } from '../services/geminiService'; // <-- Проверим импорт сервисов
 import { Chat } from '@google/generative-ai'; // <-- Нужный импорт чата
-import { FREE_MESSAGE_LIMIT } from '../constants';
 
 const SUGGESTIONS = [
   { text: "Что приготовить?", icon: <Utensils size={14} /> },
