@@ -1,49 +1,50 @@
-import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NASTYA_SYSTEM_INSTRUCTION } from "../constants";
 
-const apiKey = process.env.API_KEY;
+// 1. ИСПРАВЛЕНИЕ: Правильный доступ к ключу в Vite/Vercel
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
 
+// Лог для проверки (будет виден в консоли браузера, но ключ скроем)
 if (!apiKey) {
-  console.error("API_KEY is missing from process.env");
+  console.error("❌ ОШИБКА: API Key не найден! Проверь настройки Vercel (VITE_GEMINI_API_KEY).");
+} else {
+  console.log("✅ API Key найден. Подключаемся к ИИ...");
 }
 
-const ai = new GoogleGenAI({ apiKey: apiKey || 'DUMMY_KEY_FOR_BUILD_CHECK' });
+// 2. Инициализация стандартного SDK
+const genAI = new GoogleGenerativeAI(apiKey);
+
+// 3. ИСПРАВЛЕНИЕ: Используем стабильную модель gemini-1.5-flash
+const model = genAI.getGenerativeModel({
+  model: "gemini-1.5-flash",
+  systemInstruction: NASTYA_SYSTEM_INSTRUCTION,
+});
 
 // --- Chat Service ---
 
-export const createNastyaChat = (): Chat => {
-  return ai.chats.create({
-    model: 'gemini-3-flash-preview',
-    config: {
-      systemInstruction: NASTYA_SYSTEM_INSTRUCTION,
-      tools: [{ googleSearch: {} }],
+export const createNastyaChat = () => {
+  return model.startChat({
+    history: [],
+    generationConfig: {
+      maxOutputTokens: 1000,
     },
   });
 };
 
-export const sendMessageToAI = async (chat: Chat, message: string): Promise<{ text: string; sources?: { title: string; uri: string }[] }> => {
+export const sendMessageToAI = async (chat: any, message: string): Promise<{ text: string; sources?: { title: string; uri: string }[] }> => {
   try {
-    const response: GenerateContentResponse = await chat.sendMessage({ message });
+    const result = await chat.sendMessage(message);
+    const response = await result.response;
+    const text = response.text();
     
-    // Extract text
-    const text = response.text || "Извини, я замечталась о пасте. Повтори, пожалуйста?";
-    
-    // Extract grounding sources if available
-    const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-    let sources: { title: string; uri: string }[] = [];
-    
-    if (chunks) {
-      chunks.forEach((chunk) => {
-        if (chunk.web) {
-          sources.push({ title: chunk.web.title || 'Источник', uri: chunk.web.uri || '#' });
-        }
-      });
-    }
-
-    return { text, sources };
+    return { text, sources: [] };
   } catch (error) {
-    console.error("Error sending message:", error);
-    throw error;
+    console.error("❌ Ошибка при отправке сообщения:", error);
+    // Возвращаем вежливое сообщение, если ИИ упал
+    return { 
+        text: "На кухне небольшой переполох (ошибка связи с Google). Попробуй включить VPN или спроси меня еще раз через минуту! 🌿", 
+        sources: [] 
+    };
   }
 };
 
@@ -51,39 +52,24 @@ export const sendMessageToAI = async (chat: Chat, message: string): Promise<{ te
 
 export const generateMenuPlan = async (params: { days: number; diet: string; mood: string; allergies: string }): Promise<string | undefined> => {
   const prompt = `Составь меню на ${params.days} дней.
-  Диета/Предпочтения: ${params.diet || 'Нет'}.
-  Настроение: ${params.mood}.
-  Аллергии: ${params.allergies || 'Нет'}.
-  Оформи красиво с помощью Markdown. Используй теплый тон, как Настя.`;
+  Диета: ${params.diet || 'Нет'}. Настроение: ${params.mood}. Аллергии: ${params.allergies || 'Нет'}.
+  Тон: теплый, как Настя. Используй Markdown.`;
 
   try {
-    const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
-        config: {
-            systemInstruction: NASTYA_SYSTEM_INSTRUCTION,
-        }
-    });
-    return response.text;
+    const result = await model.generateContent(prompt);
+    return result.response.text();
   } catch (error) {
-    console.error("Error generating menu plan:", error);
+    console.error("Error generating menu:", error);
     return undefined;
   }
 };
 
 export const getDailyInspiration = async (): Promise<string | undefined> => {
-  const prompt = "Предложи одно уникальное, вдохновляющее блюдо, которое можно приготовить сегодня. Опиши его страстно. Добавь краткую суть рецепта. Используй Markdown.";
   try {
-    const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
-        config: {
-            systemInstruction: NASTYA_SYSTEM_INSTRUCTION,
-        }
-    });
-    return response.text;
+    const result = await model.generateContent("Предложи одно вдохновляющее блюдо на сегодня. Кратко и страстно.");
+    return result.response.text();
   } catch (error) {
-     console.error("Error getting daily inspiration:", error);
+     console.error("Error daily inspiration:", error);
      return undefined;
   }
 };
