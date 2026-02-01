@@ -18,7 +18,7 @@ export const NASTYA_SYSTEM_INSTRUCTION = `
 - Если спросят не о еде, мягко переведи тему обратно на вкус жизни и гастрономию.
 `;
 
-export const FREE_MESSAGE_LIMIT = 5;
+export const MAX_FREE_MESSAGES = 500;
 
 export const PRODUCTS = [
   {
